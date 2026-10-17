@@ -8,9 +8,9 @@ wah-wah basslines and drum loops that breathe.
 
 ![The MzPCF panel](docs/screenshot.png)
 
-It is the same PCF as the one in [MzDebirth](https://github.com/simozzer/MzDebirth)'s
-effects rack: the same 32 patterns, the same filter and the same knobs, so a pattern number
-means the same in both.
+It is the PCF in [MzDebirth](https://github.com/simozzer/MzDebirth)'s effects rack, too: the
+rack compiles its PCF from this repository, so the two are one and the same, and a pattern
+number means the same in both.
 
 The controls, as on ReBirth's panel:
 - **PATTERN** - which of the 32 patterns plays the filter. Drag the number up or down, or
@@ -79,7 +79,8 @@ existing release's downloads, run the workflow from the *Actions* tab with that 
 ## Layout
 
     Source/PCF/          the effect - plain C++, no JUCE
-      Pcf.h/.cpp         the patterns, the clock, the envelope and the filter
+      Pcf.h/.cpp         the patterns, the envelope and the filter - which MzDebirth's rack
+                         plays on its own clock - and the host clock that plays them here
       Settings.h         the front panel, in panel units
     Source/              the JUCE plugin round it: parameters, look, editor
     Tests/PcfCheck.cpp   the engine's checks; gates the plugin build

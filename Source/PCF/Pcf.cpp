@@ -46,52 +46,40 @@ float level(int pattern, int step)
     return (float) v / 15.0f;
 }
 
-//============================================================================== Pcf
 
-void Pcf::prepare(double sampleRate)
+//============================================================================== Envelope
+
+void Envelope::prepare(double sampleRate)
 {
     fs = sampleRate > 0.0 ? sampleRate : 48000.0;
     attackCoef = follow(0.0003f, fs);
+    setDecay(0.35f);
+    reset();
+}
+
+void Envelope::setDecay(float decay)
+{
+    const float seconds = 0.015f * std::pow(100.0f, std::clamp(decay, 0.0f, 1.0f));   // 15 ms to 1.5 s
+    decayCoef = (float) std::exp(-1.0 / (seconds * fs));
+}
+
+//============================================================================== Filter
+
+void Filter::prepare(double sampleRate)
+{
+    fs = sampleRate > 0.0 ? sampleRate : 48000.0;
     smoothCoef = follow(0.010f, fs);
     reset();
 }
 
-void Pcf::reset()
+void Filter::reset()
 {
     for (auto& s : state) s = {};
-    env = shaped = 0.0f;
-    haveCurrent = false;
-    lastStruck = -1;
-    settled = false;
+    settled = false;   // the knobs jump straight to where they are, the next block
 }
 
-void Pcf::setHostClock(bool isPlaying, double ppq, double bpm)
+void Filter::process(float* left, float* right, const float* env, int n, const Settings& s)
 {
-    playing = isPlaying && bpm > 0.0 && std::isfinite(ppq);
-
-    if (playing)
-    {
-        position = ppq * 4.0;
-        perSample = bpm / 60.0 * 4.0 / fs;
-    }
-    else
-    {
-        haveCurrent = false;
-        lastStruck = -1;
-    }
-}
-
-void Pcf::strike(long long sixteenth)
-{
-    const int s = (int) (((sixteenth % steps) + steps) % steps);
-    env = level(target.pattern, s);
-    lastStruck.store(s, std::memory_order_relaxed);
-}
-
-void Pcf::process(float* left, float* right, int n)
-{
-    const Settings& s = target;
-
     // where the knobs are heading
     const float octT   = std::clamp(s.freq, 0.0f, 1.0f) * 8.0f;     // 40 Hz to 10 kHz
     const float reachT = std::clamp(s.amount, 0.0f, 1.0f) * 7.0f;   // octaves
@@ -107,8 +95,6 @@ void Pcf::process(float* left, float* right, int n)
         settled = true;
     }
 
-    const float seconds = 0.015f * std::pow(100.0f, std::clamp(s.decay, 0.0f, 1.0f));   // 15 ms to 1.5 s
-    const float decayCoef = (float) std::exp(-1.0 / (seconds * fs));
     const float ceiling = (float) fs * 0.45f;
     const float piOverFs = pi / (float) fs;
 
@@ -116,34 +102,13 @@ void Pcf::process(float* left, float* right, int n)
 
     for (int i = 0; i < n; ++i)
     {
-        // A strike lands on the first sample of each sixteenth. Arriving in the middle of
-        // one - starting playback there, or a jump - waits for the next, as a step sequencer
-        // would; arriving on its first sample, as a loop back to the bar does, strikes it.
-        if (playing)
-        {
-            const double at = position + (double) i * perSample;
-            const long long sixteenth = (long long) std::floor(at + 1.0e-9);   // due on this sample, give or take rounding
-
-            if (! haveCurrent || sixteenth != current)
-            {
-                const bool next = haveCurrent && sixteenth == current + 1;
-                const bool onTheStep = at - (double) sixteenth < perSample;
-                current = sixteenth;
-                haveCurrent = true;
-                if (next || onTheStep) strike(sixteenth);
-            }
-        }
-
-        shaped += (env - shaped) * attackCoef;
-        env *= decayCoef;
-
         octaves += (octT - octaves) * smoothCoef;
         reach   += (reachT - reach) * smoothCoef;
         damping += (dampT - damping) * smoothCoef;
         wet     += (wetT - wet) * smoothCoef;
         gain    += (gainT - gain) * smoothCoef;
 
-        const float fc = std::min(ceiling, 40.0f * std::exp2(octaves + reach * shaped));
+        const float fc = std::min(ceiling, 40.0f * std::exp2(octaves + reach * env[i]));
         const float g = std::tan(piOverFs * fc);
         const float k = damping;
         const float a1 = 1.0f / (1.0f + g * (g + k));
@@ -168,6 +133,87 @@ void Pcf::process(float* left, float* right, int n)
             const float y = bandPass ? v1 * k * 1.5f : v2;
             sides[c][i] = (x + (y - x) * wet) * gain;
         }
+    }
+}
+
+//============================================================================== Pcf
+
+void Pcf::prepare(double sampleRate)
+{
+    fs = sampleRate > 0.0 ? sampleRate : 48000.0;
+    env.prepare(fs);
+    filter.prepare(fs);
+    reset();
+}
+
+void Pcf::reset()
+{
+    env.reset();
+    filter.reset();
+    haveCurrent = false;
+    lastStruck = -1;
+}
+
+void Pcf::setHostClock(bool isPlaying, double ppq, double bpm)
+{
+    playing = isPlaying && bpm > 0.0 && std::isfinite(ppq);
+
+    if (playing)
+    {
+        position = ppq * 4.0;
+        perSample = bpm / 60.0 * 4.0 / fs;
+    }
+    else
+    {
+        haveCurrent = false;
+        lastStruck = -1;
+    }
+}
+
+void Pcf::strike(long long sixteenth)
+{
+    const int s = (int) (((sixteenth % steps) + steps) % steps);
+    env.strike(level(target.pattern, s));
+    lastStruck.store(s, std::memory_order_relaxed);
+}
+
+void Pcf::process(float* left, float* right, int n)
+{
+    env.setDecay(target.decay);
+
+    // the envelope a chunk at a time, then the filter over that chunk
+    constexpr int chunk = 64;
+    float e[chunk];
+
+    for (int from = 0; from < n; from += chunk)
+    {
+        const int len = std::min(chunk, n - from);
+
+        for (int i = 0; i < len; ++i)
+        {
+            // A strike lands on the first sample of each sixteenth. Arriving in the middle of
+            // one - starting playback there, or a jump - waits for the next, as a step
+            // sequencer would; arriving on its first sample, as a loop back to the bar does,
+            // strikes it.
+            if (playing)
+            {
+                const double at = position + (double) (from + i) * perSample;
+                const long long sixteenth = (long long) std::floor(at + 1.0e-9);   // due on this sample, give or take rounding
+
+                if (! haveCurrent || sixteenth != current)
+                {
+                    const bool next = haveCurrent && sixteenth == current + 1;
+                    const bool onTheStep = at - (double) sixteenth < perSample;
+                    current = sixteenth;
+                    haveCurrent = true;
+                    if (next || onTheStep) strike(sixteenth);
+                }
+            }
+
+            e[i] = env.next();
+        }
+
+        filter.process(left + from, right != nullptr ? right + from : nullptr, e, len, target);
     }
 }
 
