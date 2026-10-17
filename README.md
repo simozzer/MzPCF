@@ -48,6 +48,26 @@ unknown publisher: choose *More info â†’ Run anyway*. Uninstall from *Settings â
 
 To build it yourself instead, see [Building](#building).
 
+### macOS (beta)
+
+Download `MzPCF-<version>-macOS-beta.zip` from the
+[releases page](https://github.com/simozzer/MzPCF/releases) and unzip it. It holds the VST3 and an Audio Unit (for Logic and GarageBand),
+for Apple Silicon and Intel Macs on macOS 11 or later.
+
+They aren't signed by Apple, which takes a paid developer account, so macOS won't open them
+with a double-click. Install them from Terminal instead. Type `bash ` (with the space), drag
+`install.sh` from the unzipped folder into the Terminal window, and press Return:
+
+    bash ~/Downloads/MzPCF-<version>-macOS-beta/install.sh
+
+It copies everything into your own Library folders, with no password needed, and clears the
+"downloaded from the internet" flag that would stop your DAW loading the plugin. Then rescan
+plugins in your DAW. `READ ME FIRST.txt` in the zip explains how to install by hand instead.
+
+It's a beta: built and checked on GitHub's Macs, including Apple's own Audio Unit validator,
+but not yet tried on a real one. If something doesn't work, please
+[open an issue](https://github.com/simozzer/MzPCF/issues).
+
 ## Building
 
 Needs Visual Studio 2022+ with *Desktop development with C++*, and JUCE checked out beside
@@ -71,7 +91,11 @@ installer:
    (copy it from the last release's notes), then commit both.
 3. Tag and push: `git tag -a v0.2.0 -m "MzPCF 0.2.0"`, then `git push origin main v0.2.0`.
 4. The *release* workflow builds and checks the plugin, then makes a **draft** release with
-   the notes and the two downloads. Read it over on GitHub and publish it.
+   the notes and the two Windows downloads. A few minutes later its Mac job adds
+   `MzPCF-<version>-macOS-beta.zip` to the same draft. Read it over on GitHub and publish it.
+
+The Mac build is `.github/workflows/mac.yml`. It also runs on every push to `main`, as a
+check, and keeps the zip on the run for two weeks.
 
 The workflow stops if the tag and the version in `CMakeLists.txt` disagree. To rebuild an
 existing release's downloads, run the workflow from the *Actions* tab with that tag.
