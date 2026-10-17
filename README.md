@@ -81,6 +81,7 @@ existing release's downloads, run the workflow from the *Actions* tab with that 
     Source/PCF/          the effect - plain C++, no JUCE
       Pcf.h/.cpp         the patterns, the envelope and the filter - which MzDebirth's rack
                          plays on its own clock - and the host clock that plays them here
+      StepClock.h        the host's timeline as steps, to the sample; MzPCG's clock too
       Settings.h         the front panel, in panel units
     Source/              the JUCE plugin round it: parameters, look, editor
     Tests/PcfCheck.cpp   the engine's checks; gates the plugin build

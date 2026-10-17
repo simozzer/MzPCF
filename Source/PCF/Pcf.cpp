@@ -140,7 +140,8 @@ void Filter::process(float* left, float* right, const float* env, int n, const S
 
 void Pcf::prepare(double sampleRate)
 {
-    fs = sampleRate > 0.0 ? sampleRate : 48000.0;
+    const double fs = sampleRate > 0.0 ? sampleRate : 48000.0;
+    clock.prepare(fs);
     env.prepare(fs);
     filter.prepare(fs);
     reset();
@@ -150,24 +151,14 @@ void Pcf::reset()
 {
     env.reset();
     filter.reset();
-    haveCurrent = false;
+    clock.reset();
     lastStruck = -1;
 }
 
 void Pcf::setHostClock(bool isPlaying, double ppq, double bpm)
 {
-    playing = isPlaying && bpm > 0.0 && std::isfinite(ppq);
-
-    if (playing)
-    {
-        position = ppq * 4.0;
-        perSample = bpm / 60.0 * 4.0 / fs;
-    }
-    else
-    {
-        haveCurrent = false;
-        lastStruck = -1;
-    }
+    clock.set(isPlaying, ppq, bpm);
+    if (! clock.isPlaying()) lastStruck = -1;
 }
 
 void Pcf::strike(long long sixteenth)
@@ -191,24 +182,9 @@ void Pcf::process(float* left, float* right, int n)
 
         for (int i = 0; i < len; ++i)
         {
-            // A strike lands on the first sample of each sixteenth. Arriving in the middle of
-            // one - starting playback there, or a jump - waits for the next, as a step
-            // sequencer would; arriving on its first sample, as a loop back to the bar does,
-            // strikes it.
-            if (playing)
-            {
-                const double at = position + (double) (from + i) * perSample;
-                const long long sixteenth = (long long) std::floor(at + 1.0e-9);   // due on this sample, give or take rounding
-
-                if (! haveCurrent || sixteenth != current)
-                {
-                    const bool next = haveCurrent && sixteenth == current + 1;
-                    const bool onTheStep = at - (double) sixteenth < perSample;
-                    current = sixteenth;
-                    haveCurrent = true;
-                    if (next || onTheStep) strike(sixteenth);
-                }
-            }
+            // struck on the first sample of each sixteenth
+            long long sixteenth = 0;
+            if (clock.stepAt(from + i, sixteenth)) strike(sixteenth);
 
             e[i] = env.next();
         }

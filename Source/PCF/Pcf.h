@@ -4,6 +4,7 @@
 #pragma once
 
 #include "Settings.h"
+#include "StepClock.h"
 
 #include <atomic>
 
@@ -101,14 +102,8 @@ public:
 private:
     void strike(long long sixteenth);
 
-    double fs = 48000.0;
     Settings target;
-
-    // the clock: where this block starts, in sixteenths, and how far one sample moves it
-    bool playing = false;
-    double position = 0.0, perSample = 0.0;
-    long long current = 0;    // the sixteenth the last sample fell in (negative in a pre-roll)
-    bool haveCurrent = false; // false until the first sample after starting
+    StepClock clock;          // in sixteenths
     std::atomic<int> lastStruck { -1 };
 
     Envelope env;
