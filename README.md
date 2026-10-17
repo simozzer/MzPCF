@@ -67,7 +67,7 @@ GitHub builds the downloads for every release and attaches them, so each one has
 installer:
 
 1. Bump the version in `CMakeLists.txt`.
-2. Write the notes in `docs/releases/v<version>.md`, ending with the copyright line
+2. Write the notes in `docs/releases/v<version>.md`, ending with the credit line
    (copy it from the last release's notes), then commit both.
 3. Tag and push: `git tag -a v0.2.0 -m "MzPCF 0.2.0"`, then `git push origin main v0.2.0`.
 4. The *release* workflow builds and checks the plugin, then makes a **draft** release with
@@ -112,4 +112,4 @@ automating one doesn't zip.
 
 ## Licence
 
-Copyright (C) 2026 Simon Moscrop. Free software under the GNU AGPL v3; see [LICENSE](LICENSE).
+Created by Simon Moscrop. Free software under the GNU AGPL v3; see [LICENSE](LICENSE).

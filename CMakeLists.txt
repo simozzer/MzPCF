@@ -50,7 +50,7 @@ endif()
 #
 juce_add_plugin(MzPCF
     COMPANY_NAME                "simozzer"
-    COMPANY_COPYRIGHT           "Copyright (C) 2026 Simon Moscrop"
+    COMPANY_COPYRIGHT           "Created by Simon Moscrop"
     PRODUCT_NAME                "MzPCF"
     PLUGIN_MANUFACTURER_CODE    Smoz          # never change - see above
     PLUGIN_CODE                 Pcf1          # never change - see above
