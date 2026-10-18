@@ -221,8 +221,9 @@ MzPcfEditor::MzPcfEditor(MzPcfProcessor& p)
     //
     projectLink.setButtonText("MzPCF " JucePlugin_VersionString "  -  github.com/simozzer/MzPCF");
     projectLink.setURL(juce::URL("https://github.com/simozzer/MzPCF"));
-    projectLink.setFont(fonts::bold(10.5f), false, juce::Justification::centredRight);
-    projectLink.setColour(juce::HyperlinkButton::textColourId, colours::light.withAlpha(0.6f));
+    projectLink.setFont(fonts::bold(11.5f).withStyle(juce::Font::bold | juce::Font::underlined),
+                        false, juce::Justification::centredRight);
+    projectLink.setColour(juce::HyperlinkButton::textColourId, juce::Colour(0xff6ab0ff));   // a link's blue, and underlined
     projectLink.setTooltip("The project's page: the latest version and what's new in it, the source, "
                            "and where to report a problem. Opens in your browser.");
     projectLink.setWantsKeyboardFocus(false);
