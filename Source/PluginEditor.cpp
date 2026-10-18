@@ -213,6 +213,20 @@ MzPcfEditor::MzPcfEditor(MzPcfProcessor& p)
     mode.setTooltip(juce::String("MODE\n") + params::spec("mode").hint);
     addAndMakeVisible(pattern);
     addAndMakeVisible(display);
+
+    //
+    // Where to come back to: the version this is, and the page the next one will be on.
+    // Nothing here checks for updates by itself - the plugin never goes online unasked.
+    // It takes no keyboard focus, or a host's space bar could open it rather than play.
+    //
+    projectLink.setButtonText("MzPCF " JucePlugin_VersionString "  -  github.com/simozzer/MzPCF");
+    projectLink.setURL(juce::URL("https://github.com/simozzer/MzPCF"));
+    projectLink.setFont(fonts::bold(10.5f), false, juce::Justification::centredRight);
+    projectLink.setColour(juce::HyperlinkButton::textColourId, colours::light.withAlpha(0.6f));
+    projectLink.setTooltip("The project's page: the latest version and what's new in it, the source, "
+                           "and where to report a problem. Opens in your browser.");
+    projectLink.setWantsKeyboardFocus(false);
+    addAndMakeVisible(projectLink);
     addAndMakeVisible(mode);
 
     for (const char* id : { "freq", "q", "amount", "decay" })
@@ -242,6 +256,7 @@ void MzPcfEditor::timerCallback()
 void MzPcfEditor::resized()
 {
     face = getLocalBounds().reduced(10);
+    projectLink.setBounds(face.reduced(14, 8).removeFromTop(28).removeFromRight(300));   // the title's row
 
     auto r = face.reduced(10, 8);
     r.removeFromTop(30);   // the title

@@ -104,6 +104,9 @@ private:
     Switch mode;
     std::vector<std::unique_ptr<Knob>> filterKnobs, outputKnobs;
 
+    // This version, and where to find the next: the project's page, along the title.
+    juce::HyperlinkButton projectLink;
+
     juce::Rectangle<int> face, pcfArea, outArea;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MzPcfEditor)
